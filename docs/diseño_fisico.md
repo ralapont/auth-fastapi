@@ -1,6 +1,12 @@
 # Diseño Físico del Systema
 
-En resources tienes createTables.sql script SQL para MySQL que crea las tablas, claves primarias/foráneas e índices según tu especificación. He añadido buenas prácticas habituales en MySQL:
+## Creación del usuario y base de datos
+
+En resources tienes createUser.sql script SQL para MySQL que crea la base de datos y usuario auth_user.
+
+## Modelo Físico de datos
+
+En resources tienes createTables.sql script SQL para MySQL que crea las tablas, claves primarias/foráneas e índices según tu especificación. 
 
 ENGINE=InnoDB y utf8mb4 para soporte de transacciones y caracteres.  
 id como INT AUTO_INCREMENT donde aplica.  
