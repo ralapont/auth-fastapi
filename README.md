@@ -58,3 +58,4 @@ Para la implantación del servicio vamos a segir lo siguiente:
 
 * [Creación del proyecto con poetry](docs/creacionProyecto.md)
 * [Añadir las dependencias del proyecto](docs/dependencias.md)
+* [Diseño del servicio](docs/diseño.md)
