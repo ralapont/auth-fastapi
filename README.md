@@ -60,3 +60,4 @@ Para la implantación del servicio vamos a segir lo siguiente:
 * [Añadir las dependencias del proyecto](docs/dependencias.md)
 * [Diseño datos](docs/diseño_datos.md)
 * [Diseño físico de datos](docs/diseño_fisico.md)
+* [Especificación de Endpoints del Servicio](docs/endpoints.md)

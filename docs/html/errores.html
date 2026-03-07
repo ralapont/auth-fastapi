@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Referencia de Errores de la API</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        pre {
+            background-color: #1e293b;
+            color: #f8fafc;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            overflow-x: auto;
+        }
+        code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+        .endpoint-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-weight: bold;
+            font-size: 0.75rem;
+        }
+        .error-badge { background-color: #fee2e2; color: #991b1b; }
+        .copy-section {
+            margin-top: 3rem;
+            padding: 2rem;
+            background-color: #f1f5f9;
+            border: 2px dashed #cbd5e1;
+            border-radius: 1rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans p-4 md:p-8">
+    <div class="max-w-5xl mx-auto">
+        <header class="mb-8 border-b pb-4 text-center">
+            <h1 class="text-3xl font-bold text-red-800">Control de Errores de la API</h1>
+            <p class="text-gray-600 mt-2">Guía de códigos HTTP y estructuras JSON para respuestas de error.</p>
+        </header>
+
+        <!-- Tabla de Errores -->
+        <section class="mb-12">
+            <div class="overflow-x-auto bg-white shadow-xl rounded-lg border-t-8 border-red-500">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-gray-100 border-b">
+                        <tr>
+                            <th class="p-4 font-semibold text-gray-700">Situación / Error</th>
+                            <th class="p-4 font-semibold text-gray-700 text-center">Código HTTP</th>
+                            <th class="p-4 font-semibold text-gray-700">Ejemplo de Respuesta JSON</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        <!-- 401: Credenciales -->
+                        <tr>
+                            <td class="p-4">
+                                <div class="font-bold text-gray-800">Credenciales inválidas</div>
+                                <div class="text-xs text-gray-500">Error en login (usuario/pass)</div>
+                            </td>
+                            <td class="p-4 text-center">
+                                <span class="endpoint-badge error-badge">401</span>
+                            </td>
+                            <td class="p-4">
+<pre><code>{
+  "error": "invalid_credentials",
+  "message": "El usuario o la contraseña no son correctos."
+}</code></pre>
+                            </td>
+                        </tr>
+                        <!-- 401: Token Expirado -->
+                        <tr>
+                            <td class="p-4">
+                                <div class="font-bold text-gray-800">Token expirado</div>
+                                <div class="text-xs text-gray-500">Requiere refresh del token</div>
+                            </td>
+                            <td class="p-4 text-center">
+                                <span class="endpoint-badge error-badge">401</span>
+                            </td>
+                            <td class="p-4">
+<pre><code>{
+  "error": "token_expired",
+  "message": "El token ha expirado. Solicite uno nuevo mediante /refresh."
+}</code></pre>
+                            </td>
+                        </tr>
+                        <!-- 403: Forbidden -->
+                        <tr>
+                            <td class="p-4">
+                                <div class="font-bold text-gray-800">Permisos insuficientes</div>
+                                <div class="text-xs text-gray-500">Acceso no autorizado al recurso</div>
+                            </td>
+                            <td class="p-4 text-center">
+                                <span class="endpoint-badge error-badge">403</span>
+                            </td>
+                            <td class="p-4">
+<pre><code>{
+  "error": "forbidden_scope",
+  "message": "El usuario no tiene permisos para acceder a este recurso."
+}</code></pre>
+                            </td>
+                        </tr>
+                        <!-- 404: Not Found -->
+                        <tr>
+                            <td class="p-4">
+                                <div class="font-bold text-gray-800">Usuario no encontrado</div>
+                                <div class="text-xs text-gray-500">ID de usuario inexistente</div>
+                            </td>
+                            <td class="p-4 text-center">
+                                <span class="endpoint-badge error-badge">404</span>
+                            </td>
+                            <td class="p-4">
+<pre><code>{
+  "error": "user_not_found",
+  "message": "No existe un usuario con el identificador proporcionado."
+}</code></pre>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Sección para copiar a Markdown -->
+        <section class="copy-section">
+            <h2 class="text-xl font-bold text-slate-700 mb-2">Snippet para Markdown (.md)</h2>
+            <p class="text-sm text-slate-600 mb-4">Usa este código para incluirlo rápidamente en tus archivos de texto:</p>
+<pre><code>### Manejo de Errores Comunes
+
+| Código | Error | JSON de Respuesta |
+| :--- | :--- | :--- |
+| `401` | **Credenciales** | `{"error": "invalid_credentials"}` |
+| `401` | **Expirado** | `{"error": "token_expired"}` |
+| `403` | **Permisos** | `{"error": "forbidden_scope"}` |
+| `404` | **No encontrado** | `{"error": "user_not_found"}` |</code></pre>
+        </section>
+    </div>
+</body>
+</html>
