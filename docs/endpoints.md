@@ -295,6 +295,7 @@ Tabla: Ejemplo de payload JWT
 
  ## Diagrama de flujo completo
 
+```mermaid
  flowchart TD
 
     %% --- Login ---
@@ -314,7 +315,7 @@ Tabla: Ejemplo de payload JWT
     %% --- Refresh Token Flow ---
     AT -->|Token expira| R[Refresh<br/>POST /refresh]
     R -->|Generar nuevo AT| AT
-
+```
 
 ### Explicación breve del diagrama
 
