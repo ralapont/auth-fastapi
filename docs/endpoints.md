@@ -248,7 +248,7 @@ Resumen
 
 ![Tabla de respuestas](img/respuestas.png)
 
-## Errores estÃ¡ndar del servicio
+## Errores estándar del servicio
 
 Tabla: Errores comunes
 
@@ -263,4 +263,103 @@ Ejemplos:
 ![Tabla de errores](img/errores.png)
 
 
+## Explicación de campos sensibles (JWT)
+
+Tabla: Claims más importantes
+
+| Campo | Nombre     | Descripción                                          |
+| ----- | ---------- | ---------------------------------------------------- |
+| iat   | issued at  | Momento en que se emitió el token.                   |
+| exp   | expiration | Fecha/hora de expiración.                            |
+| nbf   | not before | No válido antes de este momento.                     |
+| sub   | subject    | Identificador único del usuario.                     |
+| iss   | issuer     | Emisor del token | (ej. https://auth.miempresa.com). |
+| aud   | audience   | Servicios a los que está destinado.                  |
+| roles |            | Roles asociados al usuario.                          |
+| scope |            | Permisos (scopes) concedidos.                        |
+
+Tabla: Ejemplo de payload JWT
+
+```json
+ {
+    "sub": "a12345",
+    "iat": 1710001200,
+    "exp": 1710004800,
+    "iss": "https://auth.miempresa.com",
+    "aud": "api-servicios",
+    "roles": ["admin"],
+    "scope": "read:users write:users"
+}
+ ```
+
+
+ ## Diagrama de flujo completo
+
+ flowchart TD
+
+    %% --- Login ---
+    A[Login<br/>POST /login] -->|Credenciales válidas| B[Emitir JWTs]
+    subgraph Tokens emitidos
+        B --> AT[Access Token<br/>JWT:<br/>sub, iss, aud, exp, iat, scope]
+        B --> RT[Refresh Token<br/>JWT:<br/>sub, iss, exp, iat]
+        B --> IDT["ID Token (si OIDC)<br/>JWT:<br/>sub, email, name, iat, exp"]
+    end
+
+    %% --- Uso del Access Token en APIs ---
+    AT -->|Autorización| V[Validación en APIs<br/>Verificación firma JWT<br/>Claims evaluados:<br/>sub, aud, exp, scope, roles]
+
+    %% --- Logout ---
+    V --> L[Logout<br/>POST /logout<br/>Revocar tokens]
+
+    %% --- Refresh Token Flow ---
+    AT -->|Token expira| R[Refresh<br/>POST /refresh]
+    R -->|Generar nuevo AT| AT
+
+
+### Explicación breve del diagrama
+
+🔐 1. Login
+El usuario envía username + password.
+El servidor genera:
+
+Access Token → usado para acceder a APIs
+Refresh Token → permite obtener un nuevo Access Token
+ID Token (opcional si OIDC) → describe la identidad del usuario
+
+
+🧩 2. Claims del Access Token (AT)
+Incluye típicamente:
+
+| Campo | Nombre     | Descripción                                          |
+| ----- | ---------- | ---------------------------------------------------- |
+| iat   | issued at  | Momento en que se emitió el token.                   |
+| exp   | expiration | Fecha/hora de expiración.                            |
+| nbf   | not before | No válido antes de este momento.                     |
+| sub   | subject    | Identificador único del usuario.                     |
+| iss   | issuer     | Emisor del token | (ej. https://auth.miempresa.com). |
+| aud   | audience   | Servicios a los que está destinado.                  |
+| roles |            | Roles asociados al usuario.                          |
+| scope |            | Permisos (scopes) concedidos.                      |
+
+🔄 3. Refresh Token
+Al expirar el Access Token, el cliente llama a /refresh.
+Claims típicos del Refresh Token:
+
+- sub, iss, iat, exp
+
+El servicio genera un nuevo Access Token.
+
+✔️ 4. Validación
+Cuando una API recibe un JWT:
+
+1. Verifica la firma (clave pública JWK).
+2. Comprueba exp, aud, iss.
+3. Evalúa scope y/o roles.
+
+🚪 5. Logout
+Revocación:
+
+- Refresh token
+- Access tokens activos
+- Sesiones del usuario
 
