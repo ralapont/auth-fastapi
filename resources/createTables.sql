@@ -14,13 +14,13 @@ SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS `role_scope`;
 DROP TABLE IF EXISTS `user_role`;
 DROP TABLE IF EXISTS `scope`;
-DROP TABLE IF EXISTS `roles`;
+DROP TABLE IF EXISTS `role`;
 DROP TABLE IF EXISTS `users`;
 
 -- -----------------------------------------------------------------------------
--- Tabla: users
+-- Tabla: user
 -- -----------------------------------------------------------------------------
-CREATE TABLE `users` (
+CREATE TABLE `user` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `username` VARCHAR(100) NOT NULL,
   `email` VARCHAR(320) NOT NULL,
@@ -33,20 +33,20 @@ CREATE TABLE `users` (
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_users_username` (`username`),
-  UNIQUE KEY `uq_users_email` (`email`)
+  UNIQUE KEY `uq_user_username` (`username`),
+  UNIQUE KEY `uq_user_email` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------
--- Tabla: roles
+-- Tabla: role
 -- -----------------------------------------------------------------------------
-CREATE TABLE `roles` (
+CREATE TABLE `role` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(100) NOT NULL,
   `description` VARCHAR(500) NULL,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_roles_name` (`name`)
+  UNIQUE KEY `uq_role_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------
@@ -62,7 +62,7 @@ CREATE TABLE `scope` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------
--- Tabla: user_role (tabla de unión N:M entre users y roles)
+-- Tabla: user_role (tabla de unión N:M entre users y role)
 -- Clave primaria compuesta (user_id, role_id) como has indicado
 -- -----------------------------------------------------------------------------
 CREATE TABLE `user_role` (
@@ -73,11 +73,11 @@ CREATE TABLE `user_role` (
   PRIMARY KEY (`user_id`, `role_id`),
   KEY `ix_user_role_role_id` (`role_id`),
   CONSTRAINT `fk_user_role_user` FOREIGN KEY (`user_id`)
-    REFERENCES `users` (`id`)
+    REFERENCES `user` (`id`)
     ON UPDATE CASCADE
     ON DELETE CASCADE,
   CONSTRAINT `fk_user_role_role` FOREIGN KEY (`role_id`)
-    REFERENCES `roles` (`id`)
+    REFERENCES `role` (`id`)
     ON UPDATE CASCADE
     ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -92,7 +92,7 @@ CREATE TABLE `role_scope` (
   PRIMARY KEY (`role_id`, `scope_id`),
   KEY `ix_role_scope_scope_id` (`scope_id`),
   CONSTRAINT `fk_role_scope_role` FOREIGN KEY (`role_id`)
-    REFERENCES `roles` (`id`)
+    REFERENCES `role` (`id`)
     ON UPDATE CASCADE
     ON DELETE CASCADE,
   CONSTRAINT `fk_role_scope_scope` FOREIGN KEY (`scope_id`)

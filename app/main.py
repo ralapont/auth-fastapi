@@ -1,11 +1,24 @@
+
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
-from sqlmodel import SQLModel, select
-from app.core.config import settings
-from app.core.db import get_session, init_db
+from sqlmodel import SQLModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-app = FastAPI(title=settings.APP_NAME)
+from app.core.config import settings
+from app.core.db import init_db, get_session
+from app.routers.users import router as users_router
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Arranque
+    await init_db()
+    yield
+    # Apagado (si necesitas cerrar pools, etc.)
+
+
+app = FastAPI(title="Auth FastAPI", lifespan=lifespan)
+app.include_router(users_router)
 
 @app.on_event("startup")
 async def on_startup():

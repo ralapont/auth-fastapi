@@ -2,6 +2,7 @@ from sqlmodel import SQLModel
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from .config import settings
 
+from app.models import User, Role, Scope, UserRole, RoleScope
 
 engine = create_async_engine(
     settings.DATABASE_URL,

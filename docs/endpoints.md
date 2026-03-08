@@ -255,7 +255,7 @@ Tabla: Errores comunes
 | Código              | HTTP | Descripción                            |
 | ------------------- | ---- | -------------------------------------- |
 | invalid_credentials | 401  | Usuario o contraseña incorrectos       |
-| token_expired       | 401  | oken caducado, se debe renovar         |
+| token_expired       | 401  | Token caducado, se debe renovar         |
 | forbidden_scope     | 403  | El usuario no tiene el scope necesario |
 
 Ejemplos:
