@@ -6,6 +6,10 @@ CREATE DATABASE IF NOT EXISTS auth_db
 -- Crear usuario (si ya existe, puedes usar DROP USER primero)
 CREATE USER IF NOT EXISTS 'auth_user'@'%' IDENTIFIED BY 'auth_pass';
 
+-- Otorgar permisos para operar con tablas
+GRANT ALL PRIVILEGES ON auth_db.* TO 'auth_user'@'%';
+FLUSH PRIVILEGES;
+
 -- Otorgar permisos necesarios sobre la base de datos
 GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES
 ON auth_db.*

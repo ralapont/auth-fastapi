@@ -63,6 +63,15 @@ La tabla contiene los posibles roles del sistema
 | description   | Varchar   | No | No     | Descripción del role              |
 | created_at    | Timestamp | No | No     | Fecha y hora creación             |
 
+Esta tabla debe tener como minimo los siguientes registros:
+
+| id | name       | desciption        |
+| -- | ---------- | ----------------- |
+| 1  | admin      | Acceso total      |
+| 2  | user       | Usuario normal    |
+| 3  | supervisor | Acceso intermedio |
+
+
 ### Scope
 
 La tabla contiene los posibles scopes del sistema su nombre sera recurso:accion
@@ -73,6 +82,18 @@ La tabla contiene los posibles scopes del sistema su nombre sera recurso:accion
 | name          | Varchar   | No | Si     | Nombre del role                   |
 | description   | Varchar   | No | No     | Descripción del role              |
 | created_at    | Timestamp | No | No     | Fecha y hora creación             |
+
+Esta tabla debe tener como minimo los siguientes registros:
+
+| id | name          | 
+| -- | ------------- | 
+| 1  | user.read     | 
+| 2  | user.write    | 
+| 3  | role.read     | 
+| 4  | role.write    | 
+| 5  | product.read  | 
+| 6  | product.write | 
+
 
 ### user_role
 
