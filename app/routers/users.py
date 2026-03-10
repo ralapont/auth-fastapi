@@ -111,3 +111,20 @@ async def update_user(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
 
+@router.delete(
+    "/{id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Eliminar un usuario por ID",
+    response_description="Usuario eliminado correctamente"
+)
+async def delete_user(
+    id: int = Path(..., ge=1, description="ID del usuario a eliminar"),
+    session: AsyncSession = Depends(get_session),
+):
+    service = UserService(session)
+    try:
+        await service.delete_user(id)
+        return  # 204 No Content
+    except UserNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+

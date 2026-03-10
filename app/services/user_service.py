@@ -268,3 +268,16 @@ class UserService:
         
         return response
 
+
+    async def delete_user(self, user_id: int) -> None:
+        # 1) Comprobar existencia
+        res = await self.session.execute(select(User).where(User.id == user_id))
+        user = res.scalar_one_or_none()
+        if user is None:
+            raise UserNotFoundError(f"Usuario con id={user_id} no encontrado")
+
+        # 2) Borrar
+        await self.session.delete(user)
+        await self.session.flush()
+        # Si no tienes commit global:
+        await self.session.commit()

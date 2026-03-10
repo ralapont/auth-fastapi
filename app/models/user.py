@@ -15,4 +15,4 @@ class User(SQLModel, table=True):
     fullName: str | None = Field(default=None, max_length=200) # fullName en la DB
     phone: str | None = Field(default=None, max_length=50)
 
-    roles: List["Role"] = Relationship(back_populates="users", link_model=UserRole)
+    roles: List["Role"] = Relationship(back_populates="users", link_model=UserRole, sa_relationship_kwargs={"lazy": "selectin"},)

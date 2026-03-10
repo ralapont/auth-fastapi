@@ -15,5 +15,5 @@ class Role(SQLModel, table=True):
     name: str = Field(unique=True)
 
     # Objetivo explícito en Relationship para evitar "list['User']"
-    users: List["User"] = Relationship(back_populates="roles", link_model=UserRole)
-    scopes: List["Scope"] = Relationship(back_populates="roles", link_model=RoleScope)    
+    users: List["User"] = Relationship(back_populates="roles", link_model=UserRole, sa_relationship_kwargs={"lazy": "selectin"})
+    scopes: List["Scope"] = Relationship(back_populates="roles", link_model=RoleScope, sa_relationship_kwargs={"lazy": "selectin"})    
