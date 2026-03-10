@@ -7,16 +7,15 @@ from typing import Optional, Sequence
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
-from passlib.context import CryptContext
 from app.core.security import get_password_hash
 
 from app.models import User, Role, UserRole
+from app.schemas.user import UserOut
+from app.exceptions.user_exceptions import UserNotFoundError
 
 # Configuramos el logger
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 class UserAlreadyExistsError(Exception):
@@ -97,7 +96,7 @@ class UserService:
         fullName: str | None = None, 
         phone: str | None = None,
         roles: Sequence[str] | None = None,
-    ) -> User:
+    ) -> Optional[UserOut]:
         """
         Registra un nuevo usuario aplicando reglas de negocio:
 
@@ -151,13 +150,43 @@ class UserService:
         role_names = [r.name for r in found_roles]
         logger.info("Devolviendo datos al Router...")
         
-        response = {
-                    "id": new_user.id,
-                    "username": new_user.username,
-                    "email": new_user.email,
-                    "fullName": new_user.fullName,
-                    "phone": new_user.phone,
-                    "roles": role_names
-                }
+        response = await self.get_user_by_id(new_user.id)
         
         return response
+
+
+    async def list_users(self, *, skip: int = 0, limit: int = 50) -> list[UserOut]:
+        stmt = (
+                select(User)
+                .options(
+                    selectinload(User.roles).options(
+                        selectinload(Role.scopes)
+                    )
+                )
+                .offset(skip)
+                .limit(limit)
+            )
+
+        result = await self.session.execute(stmt)
+        rows = result.scalars().all()
+
+        return [UserOut.model_validate(r, from_attributes=True) for r in rows]
+
+
+    async def get_user_by_id(self, user_id: int) -> Optional[UserOut]:
+        stmt = (
+            select(User)
+            .where(User.id == user_id)
+            .options(
+                selectinload(User.roles).options(
+                    selectinload(Role.scopes)
+                )
+            )
+            .limit(1)
+        )
+
+        result = await self.session.execute(stmt)
+        row = result.scalar_one_or_none()
+        if row is None:
+            raise UserNotFoundError(f"Usuario con id={user_id} no encontrado")
+        return UserOut.model_validate(row, from_attributes=True)

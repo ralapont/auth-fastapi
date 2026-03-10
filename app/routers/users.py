@@ -1,6 +1,9 @@
 # app/routers/users.py
 import json
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List
+
+
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Path, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -13,9 +16,12 @@ from app.models.role import Role
 from app.models.user_role import UserRole
 
 from app.services.user_service import UserService
-from app.exceptions.user_exceptions import UserAlreadyExistsError
+from app.exceptions.user_exceptions import UserAlreadyExistsError, UserNotFoundError
 
 router = APIRouter(prefix="/v1/user", tags=["users"])
+
+async def get_user_service(session: AsyncSession = Depends(get_session)) -> UserService:
+    return UserService(session)
 
 @router.post(
     "/register",
@@ -24,9 +30,7 @@ router = APIRouter(prefix="/v1/user", tags=["users"])
     summary="Registrar un nuevo usuario",
     response_description="Usuario creado correctamente"
 )
-async def register_user(payload: UserRegisterIn, session: AsyncSession = Depends(get_session)):
-    service = UserService(session)
-
+async def register_user(payload: UserRegisterIn, service: UserService = Depends(get_user_service)):
     try:
         user_data = await service.register_user(
             username=payload.username,
@@ -41,4 +45,38 @@ async def register_user(payload: UserRegisterIn, session: AsyncSession = Depends
     except UserAlreadyExistsError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+
+
+@router.get(
+    "/",
+    response_model=List[UserOut],
+    status_code=status.HTTP_200_OK,
+    summary="Listar usuarios",
+    response_description="Listado paginado de usuarios"
+)
+async def list_users(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    service: UserService = Depends(get_user_service),
+):
+    return await service.list_users(skip = skip, limit = limit)
+
+@router.get(
+    "/{id}",
+    response_model=UserOut,
+    status_code=status.HTTP_200_OK,
+    summary="Obtener un usuario por ID",
+    response_description="Usuario encontrado"
+)
+async def get_user_by_id(
+    id: int = Path(..., ge=1, description="Identificador del usuario"),
+    service: UserService = Depends(get_user_service)
+):
+    try:
+        user = await service.get_user_by_id(id)
+        return user
+    except UserNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
         ) from exc
