@@ -10,7 +10,7 @@ from sqlalchemy import select
 from app.core.db import get_session
 
 from app.schemas.user import UserOut
-from app.schemas.user import UserRegisterIn
+from app.schemas.user import UserRegisterIn, UserUpdateIn
 
 from app.models.role import Role
 from app.models.user_role import UserRole
@@ -80,3 +80,34 @@ async def get_user_by_id(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
         ) from exc
+
+
+@router.put(
+    "/{id}",
+    response_model=UserOut,
+    status_code=status.HTTP_200_OK,
+    summary="Actualizar un usuario por ID (sin cambiar contraseña)",
+    response_description="Usuario actualizado correctamente"
+)
+async def update_user(
+    id: int = Path(..., ge=1, description="Identificador del usuario"),
+    payload: UserUpdateIn = ...,
+    session: AsyncSession = Depends(get_session),
+):
+    service = UserService(session)
+    try:
+        user = await service.update_user(
+            user_id=id,
+            username=payload.username,
+            email=payload.email,
+            fullName=payload.fullName,
+            phone=payload.phone,
+            roles=payload.roles,  # None ⇒ no tocar; [] ⇒ quitar todas; ["admin", ...] ⇒ reemplazar
+        )
+        return user
+    except UserNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except UserAlreadyExistsError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+

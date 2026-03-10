@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import logging
 import json
-from typing import Optional, Sequence
+from typing import Optional, Sequence, List
 
-from sqlalchemy import select
+from sqlalchemy import select, exists, and_, delete, insert
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import get_password_hash
@@ -190,3 +190,81 @@ class UserService:
         if row is None:
             raise UserNotFoundError(f"Usuario con id={user_id} no encontrado")
         return UserOut.model_validate(row, from_attributes=True)
+
+
+    async def update_user(
+        self,
+        *,
+        user_id: int,
+        username: Optional[str] = None,
+        email: Optional[str] = None,
+        fullName: Optional[str] = None,
+        phone: Optional[str] = None,
+        roles: Optional[List[str]] = None,
+    ) -> UserOut:
+
+        # 1) Cargar usuario
+        res = await self.session.execute(select(User).where(User.id == user_id).limit(1))
+        user = res.scalar_one_or_none()
+        if user is None:
+            raise UserNotFoundError(f"Usuario con id={user_id} no encontrado")
+
+        # 2) Validar unicidad si cambian username / email
+        if username is not None and username != user.username:
+            exists_username = await self.session.execute(
+                select(exists().where(and_(User.username == username, User.id != user_id)))
+            )
+            if exists_username.scalar():
+                raise UserAlreadyExistsError(f"username '{username}' ya está en uso")
+
+        if email is not None and email != user.email:
+            exists_email = await self.session.execute(
+                select(exists().where(and_(User.email == email, User.id != user_id)))
+            )
+            if exists_email.scalar():
+                raise UserAlreadyExistsError(f"email '{email}' ya está en uso")
+
+        # 3) Aplicar cambios simples (sin password)
+        if username is not None:
+            user.username = username
+        if email is not None:
+            user.email = email
+        if fullName is not None:
+            user.fullName = fullName
+        if phone is not None:
+            user.phone = phone
+
+
+        # 4) Reemplazo de roles (si 'roles' viene en el body)
+        if roles is not None:
+            # 4.1) Resolver los Role.id desde los nombres
+            res_roles = await self.session.execute(
+                select(Role.id, Role.name).where(Role.name.in_(roles))
+            )
+            rows = res_roles.all()
+            found_by_name = {name: rid for rid, name in rows}
+            missing = [name for name in roles if name not in found_by_name]
+            if missing:
+                # Usa 404 o 422 según tu semántica
+                raise UserNotFoundError(f"Roles no encontrados: {missing}")
+
+            # 4.2) Borrar todas las filas de la asociación del usuario (sin tocar otros datos)
+            await self.session.execute(
+                delete(UserRole).where(UserRole.user_id == user_id)
+            )
+
+            # 4.3) Insertar las nuevas asociaciones (si hay)
+            if roles:
+                await self.session.execute(
+                    insert(UserRole),
+                    [{"user_id": user_id, "role_id": found_by_name[name]} for name in roles],
+                )
+
+        # 5) Persistir cambios
+        await self.session.commit()
+        await self.session.flush()
+
+        response = await self.get_user_by_id(user.id)
+        
+        return response
+
