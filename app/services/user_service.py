@@ -4,14 +4,14 @@ import logging
 import json
 from typing import Optional, Sequence, List
 
-from sqlalchemy import select, exists, and_, delete, insert
+from sqlalchemy import select, exists, and_, or_, delete, insert
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import get_password_hash
 
 from app.models import User, Role, UserRole
 from app.schemas.user import UserOut
-from app.exceptions.user_exceptions import UserNotFoundError
+from app.exceptions.user_exceptions import UserNotFoundError, UserAlreadyExistsError
 
 # Configuramos el logger
 logger = logging.getLogger(__name__)
@@ -74,6 +74,7 @@ class UserService:
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
+
     async def exists_username_or_email(self, username: str, email: str) -> bool:
         """
         Indica si existe ya un registro con el `username` o el `email` dados.
@@ -81,9 +82,14 @@ class UserService:
         Returns:
             bool: True si existe alguna coincidencia, False en caso contrario.
         """
-        stmt = select(User).where((User.username == username) | (User.email == email))
-        result = await self.session.execute(stmt)
-        return result.scalar_one_or_none() is not None
+        result = await self.session.execute(
+            select(User.id).where(
+                or_(User.username == username, User.email == email)
+            )
+        )
+        return result.first() is not None
+
+
 
     # ---------- Comandos (mutaciones) ----------
 

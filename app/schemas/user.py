@@ -14,19 +14,20 @@ class RoleOut(BaseModel):
     scopes: List[RoleScopeOut] = []
 
 class UserRegisterIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # evita campos inesperados
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
     password: str = Field(..., min_length=8)
-    fullName: str | None = None 
-    phone: str | None = None     
-    roles: List[str] = Field(default_factory=lambda: ["user"])
+    fullName: Optional[str] = None
+    phone: Optional[str] = None     
+    roles: List[str] = []
 
 class UserOut(BaseModel):
     id: int
     username: str
     email: EmailStr
-    fullName: str 
-    phone: str          
+    fullName: Optional[str] = None 
+    phone: Optional[str] = None          
     roles: List[RoleOut] = []
 
 
