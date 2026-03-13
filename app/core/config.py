@@ -1,5 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
+from datetime import timedelta
+import os
 
 
 class Settings(BaseSettings):
@@ -19,6 +21,20 @@ class Settings(BaseSettings):
     DB_USER: str
     DB_PASSWORD: str
     DB_NAME: str
+
+    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+    ACCESS_MIN: int = int(os.getenv("ACCESS_MIN", "15"))
+    REFRESH_DAYS: int = int(os.getenv("REFRESH_DAYS", "7"))
+
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "CHANGE_ME")
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE: timedelta = timedelta(minutes=int(os.getenv("ACCESS_MIN", "15")))
+    REFRESH_TOKEN_EXPIRE: timedelta = timedelta(days=int(os.getenv("REFRESH_DAYS", "7")))
+    # Si prefieres cookies HttpOnly para tokens:
+    USE_COOKIES: bool = os.getenv("AUTH_COOKIES", "false").lower() == "true"
+    ACCESS_COOKIE_NAME: str = "access_token"
+    REFRESH_COOKIE_NAME: str = "refresh_token"
 
     DATABASE_URL: str | None = None
 

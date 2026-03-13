@@ -6,7 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.db import init_db, get_session
+
 from app.routers.users import router as users_router
+from app.routers.auth import router as auth_router
 
 
 @asynccontextmanager
@@ -18,7 +20,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Auth FastAPI", lifespan=lifespan)
+
+
 app.include_router(users_router)
+app.include_router(auth_router)
 
 @app.on_event("startup")
 async def on_startup():

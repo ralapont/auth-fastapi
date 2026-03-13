@@ -1,5 +1,7 @@
 from typing import List, Optional, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
+from datetime import datetime
+from sqlalchemy import Column, Boolean, Integer, DateTime
 
 from .role import Role                # ✅ Import real, NO forward ref
 from .user_role import UserRole
@@ -14,5 +16,20 @@ class User(SQLModel, table=True):
 
     fullName: str | None = Field(default=None, max_length=200) # fullName en la DB
     phone: str | None = Field(default=None, max_length=50)
+
+    is_active: bool = Field(
+        default=True,
+        sa_column=Column("isActive", Boolean, nullable=False)
+    )
+
+    retry_count: int = Field(
+        default=0,
+        sa_column=Column("retryCount", Integer, nullable=False)
+    )
+
+    last_login_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column("lastLogin_at", DateTime, nullable=True)
+    )
 
     roles: List["Role"] = Relationship(back_populates="users", link_model=UserRole, sa_relationship_kwargs={"lazy": "selectin"},)
