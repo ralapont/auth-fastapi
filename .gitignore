@@ -1,0 +1,52 @@
+# ===========================
+#  POETRY / PYTHON
+# ===========================
+
+# Entornos virtuales creados por Poetry
+# (Poetry suele usar ~/.cache/pypoetry, pero si se fuerza localmente...)
+.venv/
+venv/
+env/
+
+# Archivos de bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Archivos de logs
+*.log
+
+# Archivos de base de datos locales (si usas SQLite en desarrollo)
+*.sqlite3
+*.db
+
+# Configuración local de usuarios
+*.env
+.env.*
+!env.example
+
+# ===========================
+#  EDITORES / SISTEMA
+# ===========================
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# PyCharm / IntelliJ
+.idea/
+
+# Mac / Linux
+.DS_Store
+Thumbs.db
+
+# ===========================
+#  TESTS
+# ===========================
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+.cache
+pytest_cache/
