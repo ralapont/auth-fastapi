@@ -219,22 +219,23 @@ Resumen
 
 **Endpoints de Autenticación**
 
-| Endpoint | Método | Descripción                                                               | Autenticación Requerida    |
-| -------- | :----: | ------------------------------------------------------------------------- | -------------------------- |
-| /login   | POST   | Autentica al usuario y genera los tokens correspondientes.                | No (requiere credenciales) |
-| /refresh | POST   | Genera un nuevo access token a partir de un refresh token válido.         | Sí (refresh token)         |
-| /logout  | POST   | Revoca la sesión y/o tokens activos.                                      | Sí (access token)          |
-| /me      | GET    | Devuelve la información del usuario autenticado (claims, perfil básico…). | Sí (access token)          |
+| Endpoint      | Método | Descripción                                                               | Autenticación Requerida    |
+| ------------- | :----: | ------------------------------------------------------------------------- | -------------------------- |
+| /auth/login   | POST   | Autentica al usuario y genera los tokens correspondientes.                | No (requiere credenciales) |
+| /auth/refresh | POST   | Genera un nuevo access token a partir de un refresh token válido.         | Sí (refresh token)         |
+| /auth/logout  | POST   | Revoca la sesión y/o tokens activos.                                      | Sí (access token)          |
+| /auth/me      | GET    | Devuelve la información del usuario autenticado (claims, perfil básico…). | Sí (access token)          |
 
 **Endpoints del Recurso users (CRUD)**
 
-| Endpoint    | Método | Descripción                                                               | Autenticación Requerida |
-| ----------- | :----: | ------------------------------------------------------------------------- | ------------------------|
-| /users      | POST   | Crea un nuevo usuario (equivalente a register).                           | Sí (Permisos admin)     |
-| /users      | GET    | Lista todos los usuarios.                                                 | Sí (Permisos admin)     |
-| /users/{id} | GET    | Obtiene la información de un usuario por ID.                              | Sí                      |
-| /users/{id} | PUT    | Actualiza datos del usuario.                                              | Sí                      |
-| /users/{id} | DELETE | Elimina o desactiva un usuario.                                           | Sí (admin)              |
+| Endpoint             | Método | Descripción                                                               | Autenticación Requerida |
+| -------------------- | :----: | ------------------------------------------------------------------------- | ------------------------|
+| /users               | POST   | Crea un nuevo usuario (equivalente a register).                           | Sí (Permisos admin)     |
+| /users               | GET    | Lista todos los usuarios.                                                 | Sí (Permisos admin)     |
+| /users/{id}          | GET    | Obtiene la información de un usuario por ID.                              | Sí                      |
+| /users/{id}          | PUT    | Actualiza datos del usuario.                                              | Sí                      |
+| /users/{id}          | DELETE | Elimina o desactiva un usuario.                                           | Sí (admin)              |
+| /users/{id}/password | PATCH  | Cambia la password a un usuario.                                          | Sí (admin)              |
 
 ## Modelos y ejemplos
 
@@ -255,7 +256,7 @@ Tabla: Errores comunes
 | Código              | HTTP | Descripción                            |
 | ------------------- | ---- | -------------------------------------- |
 | invalid_credentials | 401  | Usuario o contraseña incorrectos       |
-| token_expired       | 401  | Token caducado, se debe renovar         |
+| token_expired       | 401  | Token caducado, se debe renovar        |
 | forbidden_scope     | 403  | El usuario no tiene el scope necesario |
 
 Ejemplos:

@@ -21,6 +21,7 @@ python-dotenv = "^1.0"
 
 # Si piensas usar Alembic para migraciones:
 alembic = "^1.13"
+python-jose = {extras = ["cryptography"], version = "^3.5.0"}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"
