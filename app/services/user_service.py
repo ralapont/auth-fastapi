@@ -18,10 +18,6 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
-class UserAlreadyExistsError(Exception):
-    """Se lanza cuando username o email ya están registrados."""
-
-
 class UserService:
     """
     Servicio de dominio para operaciones con usuarios.
