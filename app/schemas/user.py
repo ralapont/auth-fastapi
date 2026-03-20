@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
 from typing import List, Optional
 
@@ -27,7 +29,8 @@ class UserOut(BaseModel):
     username: str
     email: EmailStr
     fullName: Optional[str] = None 
-    phone: Optional[str] = None          
+    phone: Optional[str] = None  
+    lastLogin_at: Optional[datetime]
     roles: List[RoleOut] = []
 
 

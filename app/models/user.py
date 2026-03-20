@@ -27,7 +27,7 @@ class User(SQLModel, table=True):
         sa_column=Column("retryCount", Integer, nullable=False)
     )
 
-    last_login_at: Optional[datetime] = Field(
+    lastLogin_at: Optional[datetime] = Field(
         default=None,
         sa_column=Column("lastLogin_at", DateTime, nullable=True)
     )

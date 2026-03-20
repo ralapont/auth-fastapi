@@ -61,6 +61,12 @@ async def login_user(
     if not user or not verify_password(password, user.password_hash):
         return None
 
+    # ⏱️ Actualizamos lastLogin_at
+    user.lastLogin_at = datetime.now(timezone.utc)
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+
     # Familia de tokens (sesión completa)
     family_id = str(uuid4())
 
