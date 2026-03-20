@@ -17,12 +17,12 @@ class User(SQLModel, table=True):
     fullName: str | None = Field(default=None, max_length=200) # fullName en la DB
     phone: str | None = Field(default=None, max_length=50)
 
-    is_active: bool = Field(
+    isActive: bool = Field(
         default=True,
         sa_column=Column("isActive", Boolean, nullable=False)
     )
 
-    retry_count: int = Field(
+    retryCount: int = Field(
         default=0,
         sa_column=Column("retryCount", Integer, nullable=False)
     )

@@ -3,6 +3,7 @@ from uuid import uuid4
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
+from app.core.config import settings
 
 from app.models.user import User
 from app.core.security import (
@@ -59,7 +60,26 @@ async def login_user(
     user = await get_user_by_username(session, username)
 
     if not user or not verify_password(password, user.password_hash):
+
+        user.retryCount += 1
+
+        # ¿Supera el máximo permitido?
+        if user.retryCount >= settings.MAX_RETRY:
+            user.isActive = False
+            await session.commit()
+            return "blocked"
+
+        # Guardamos el incremento
+        await session.commit()
         return None
+
+    # Si llegamos aquí → LOGIN CORRECTO
+    # Reset del retry_count
+    user.retryCount = 0
+
+    # Cuenta bloqueada
+    if not user.isActive:
+        return "blocked"
 
     # ⏱️ Actualizamos lastLogin_at
     user.lastLogin_at = datetime.now(timezone.utc)

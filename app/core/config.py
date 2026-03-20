@@ -26,6 +26,7 @@ class Settings(BaseSettings):
 
     ACCESS_MIN: int = int(os.getenv("ACCESS_MIN", "15"))
     REFRESH_DAYS: int = int(os.getenv("REFRESH_DAYS", "7"))
+    MAX_RETRY: int = int(os.getenv("MAX_RETRY", "5"))
 
     SECRET_KEY: str = os.getenv("SECRET_KEY", "CHANGE_ME")
     ALGORITHM: str = "HS256"

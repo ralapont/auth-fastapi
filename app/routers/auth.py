@@ -23,8 +23,12 @@ def _bearer(header: str | None) -> str | None:
 @router.post("/login", response_model=TokenPair)
 async def login(data: LoginRequest, session: AsyncSession = Depends(get_session)):
     tokens = await login_user(session, data.username, data.password)
+
     if not tokens:
         raise HTTPException(401, "Invalid credentials")
+    if tokens == "blocked":
+        raise HTTPException(403, "Account blocked due to too many failed attempts")
+
     return TokenPair(
         access_token=tokens["access"],
         refresh_token=tokens["refresh"]
