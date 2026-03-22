@@ -1,5 +1,5 @@
 # app/routers/users.py
-import json
+import logging
 from typing import List
 
 
@@ -12,11 +12,12 @@ from app.core.db import get_session
 from app.schemas.user import UserOut
 from app.schemas.user import UserRegisterIn, UserUpdateIn
 
-from app.models.role import Role
-from app.models.user_role import UserRole
-
 from app.services.user_service import UserService
 from app.exceptions.user_exceptions import UserAlreadyExistsError, UserNotFoundError
+
+# Configuramos el logger
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 router = APIRouter(prefix="/v1/user", tags=["users"])
 
@@ -25,13 +26,22 @@ async def get_user_service(session: AsyncSession = Depends(get_session)) -> User
 
 @router.post(
     "/register",
-    response_model=UserOut,
     status_code=status.HTTP_201_CREATED,
+    responses = {
+        201: {"model": UserOut},
+        409: {"description": "Username o email ya están registrados"}
+    },
     summary="Registrar un nuevo usuario",
     response_description="Usuario creado correctamente"
 )
 async def register_user(payload: UserRegisterIn, service: UserService = Depends(get_user_service)):
     try:
+
+        logger.error(
+            "ROUTER captura clase: %s (mod=%s, id=%s)",
+            UserAlreadyExistsError, UserAlreadyExistsError.__module__, id(UserAlreadyExistsError)
+        )
+
         user_data = await service.register_user(
             username=payload.username,
             email=payload.email,
@@ -43,9 +53,14 @@ async def register_user(payload: UserRegisterIn, service: UserService = Depends(
 
         return user_data
     except UserAlreadyExistsError as exc:
+        logger.error(
+            "SERVICE va a lanzar: %s (mod=%s, id=%s)",
+            UserAlreadyExistsError, UserAlreadyExistsError.__module__, id(UserAlreadyExistsError)
+        )
+
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
-        ) from exc
+        ) 
 
 
 @router.get(
