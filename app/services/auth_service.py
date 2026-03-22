@@ -25,7 +25,7 @@ from app.core.token_store_redis import (
 # -----------------------------
 #  Utilidades internas
 # -----------------------------
-
+   
 def _get_epoch(payload: Dict[str, Any]) -> int:
     exp = payload["exp"]
     if isinstance(exp, int):
@@ -59,7 +59,22 @@ async def login_user(
     user = await get_user_by_username(session, username)
 
     if not user or not verify_password(password, user.password_hash):
-        return None
+
+        if user:
+            if not user.is_active:
+                return "userLocked"
+            
+            user.retry_count += 1
+            user.lastLogin_at = datetime.now(timezone.utc)
+
+            if user.retry_count == 5:
+                user.is_active = False
+
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
+
+            return "userInvalidCredentials"
 
     # ⏱️ Actualizamos lastLogin_at
     user.lastLogin_at = datetime.now(timezone.utc)
@@ -208,3 +223,4 @@ async def get_current_user(
 
     except Exception:
         return None
+    

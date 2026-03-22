@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
 from app.core.db import get_session
+from app.exceptions.auth_exceptions import AuthUserLocked, AuthInvalidCredentiasl
 from app.services.auth_service import (
     login_user,
     refresh_tokens,
@@ -23,6 +24,11 @@ def _bearer(header: str | None) -> str | None:
 @router.post("/login", response_model=TokenPair)
 async def login(data: LoginRequest, session: AsyncSession = Depends(get_session)):
     tokens = await login_user(session, data.username, data.password)
+    if tokens == "userLocked":
+        raise AuthUserLocked
+    if tokens == "userInvalidCredentials":
+        raise AuthInvalidCredentiasl
+    
     if not tokens:
         raise HTTPException(401, "Invalid credentials")
     return TokenPair(
