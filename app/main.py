@@ -1,3 +1,4 @@
+import logging
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, Request
@@ -13,6 +14,13 @@ from app.routers.auth import router as auth_router
 
 from app.exceptions.auth_exceptions import AuthUserLocked, AuthInvalidCredentiasl
 
+# Configura el formato de los logs
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

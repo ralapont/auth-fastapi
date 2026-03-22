@@ -1,4 +1,5 @@
-from typing import Optional, Dict, Any, List, Union
+import logging
+from typing import Optional, Dict, Any
 from uuid import uuid4
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,9 +24,13 @@ from app.core.token_store_redis import (
     family_is_revoked
 )
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 class AuthService:
     def __init__(self, session: AsyncSession):
         self.session = session
+        self.logger = logging.getLogger("AuthService")
 
     # --- Utilidades internas ---
     def _get_epoch(self, payload: Dict[str, Any]) -> int:
@@ -155,18 +160,34 @@ class AuthService:
         except Exception:
             return None
 
-    async def restore_user_access(self, user_id: int) -> User:
+    async def unlock(self, user_id: int) -> User:
+
+        self.logger.info(f"Intentando restaurar acceso para el usuario ID: {user_id}")
+
+        stmt = select(User).where(User.id == user_id)
+        result = await self.session.execute(stmt)
+        user = result.scalar_one_or_none()
         user = await self.get_user_by_id(user_id)
         
+        
         if not user:
+            self.logger.warning(f"Restauración fallida: Usuario {user_id} no encontrado")
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
         
+        self.logger.info(f"Usuario {user.username} encontrado. Estado actual: is_active={user.is_active}")
+
         # Reset de seguridad
         user.is_active = True
         user.retry_count = 0 
         
-        self.session.add(user)
-        await self.session.commit()
-        await self.session.refresh(user)
+        try:
+            self.session.add(user)
+            await self.session.commit()
+            await self.session.refresh(user)
+            self.logger.info(f"Usuario {user.username} desbloqueado exitosamente")
+        except Exception as e:
+            self.logger.error(f"Error en base de datos al restaurar usuario: {str(e)}")
+            await self.session.rollback()
+            raise e
         
         return user

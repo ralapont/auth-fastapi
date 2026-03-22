@@ -79,13 +79,13 @@ async def me(authorization: str | None = Header(None), service: AuthService = De
         roles=[r.name for r in user.roles]
     )
 
-@router.post("/restore-user/{user_id}")
+@router.post("/unlock/{user_id}")
 async def restore_user_endpoint(
     user_id: int,
     service: AuthService = Depends(get_auth_service),
     admin = Depends(get_current_admin_user)
 ):
     # Aquí le pasas la sesión 'db' que FastAPI te dio arriba
-    user = await service.restore_user_access(user_id=user_id)
+    user = await service.unlock(user_id=user_id)
     
     return {"message": f"Usuario {user.email} desbloqueado"}
