@@ -29,16 +29,10 @@ async def lifespan(app: FastAPI):
     yield
     # Apagado (si necesitas cerrar pools, etc.)
 
-
 app = FastAPI(title="Auth FastAPI", lifespan=lifespan)
-
 
 app.include_router(users_router)
 app.include_router(auth_router)
-
-@app.on_event("startup")
-async def on_startup():
-    await init_db()
 
 # Añade este bloque a tu main.py
 @app.exception_handler(AuthUserLocked)
