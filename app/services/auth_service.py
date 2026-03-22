@@ -1,8 +1,9 @@
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 from uuid import uuid4
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
+from fastapi import HTTPException, status
 
 from app.models.user import User
 from app.core.security import (
@@ -22,205 +23,150 @@ from app.core.token_store_redis import (
     family_is_revoked
 )
 
-# -----------------------------
-#  Utilidades internas
-# -----------------------------
-   
-def _get_epoch(payload: Dict[str, Any]) -> int:
-    exp = payload["exp"]
-    if isinstance(exp, int):
-        return exp
-    return int(exp.timestamp())
+class AuthService:
+    def __init__(self, session: AsyncSession):
+        self.session = session
 
-def _now_epoch() -> int:
-    return int(datetime.now(timezone.utc).timestamp())
+    # --- Utilidades internas ---
+    def _get_epoch(self, payload: Dict[str, Any]) -> int:
+        exp = payload["exp"]
+        return exp if isinstance(exp, int) else int(exp.timestamp())
 
-# -----------------------------
-#  Servicio de Usuarios (DB)
-# -----------------------------
+    def _now_epoch(self) -> int:
+        return int(datetime.now(timezone.utc).timestamp())
 
-async def get_user_by_username(
-    session: AsyncSession,
-    username: str
-) -> Optional[User]:
-    stmt = select(User).where(User.username == username)
-    result = await session.execute(stmt)
-    return result.scalar_one_or_none()
+    # --- Métodos de Base de Datos ---
 
-# -----------------------------
-#  LOGIN
-# -----------------------------
+    async def get_user_by_username(self, username: str) -> Optional[User]:
+        stmt = select(User).where(User.username == username)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
 
-async def login_user(
-    session: AsyncSession,
-    username: str,
-    password: str
-) -> Dict[str, str]:
-    user = await get_user_by_username(session, username)
+    async def get_user_by_id(self, user_id: int) -> Optional[User]:
+        stmt = select(User).where(User.id == user_id)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
 
-    if not user or not verify_password(password, user.password_hash):
+    # --- Lógica de Negocio ---
 
-        if user:
-            if not user.is_active:
-                return "userLocked"
+    async def login_user(self, username: str, password: str) -> Dict[str, str]:
+        user = await self.get_user_by_username(username)
+
+        # Validación de credenciales y bloqueo
+        if not user or not verify_password(password, user.password_hash):
+            if user:
+                if not user.is_active:
+                    # Aquí es donde lanzamos tu excepción personalizada o una 403
+                    raise HTTPException(status_code=403, detail="USER_LOCKED")
+                
+                user.retry_count += 1
+                user.lastLogin_at = datetime.now(timezone.utc)
+
+                if user.retry_count >= 5:
+                    user.is_active = False
+
+                self.session.add(user)
+                await self.session.commit()
+                raise HTTPException(status_code=401, detail="INVALID_CREDENTIALS")
             
-            user.retry_count += 1
-            user.lastLogin_at = datetime.now(timezone.utc)
+            raise HTTPException(status_code=401, detail="INVALID_CREDENTIALS")
 
-            if user.retry_count == 5:
-                user.is_active = False
+        # Login exitoso: Resetear intentos y actualizar fecha
+        user.retry_count = 0
+        user.lastLogin_at = datetime.now(timezone.utc)
+        self.session.add(user)
+        await self.session.commit()
 
-            session.add(user)
-            await session.commit()
-            await session.refresh(user)
+        family_id = str(uuid4())
+        claims = {
+            "name": user.fullName,
+            "email": user.email,
+            "roles": [r.name for r in user.roles]
+        }
 
-            return "userInvalidCredentials"
+        access = create_access_token(user.username, family_id, claims)
+        refresh = create_refresh_token(user.username, family_id)
 
-    # ⏱️ Actualizamos lastLogin_at
-    user.lastLogin_at = datetime.now(timezone.utc)
-    session.add(user)
-    await session.commit()
-    await session.refresh(user)
+        # Registro en Redis
+        r_payload = decode_token(refresh)
+        await register_refresh(
+            jti=r_payload["jti"],
+            sub=r_payload["sub"],
+            family_id=r_payload["family"],
+            exp_ts=self._get_epoch(r_payload)
+        )
 
-    # Familia de tokens (sesión completa)
-    family_id = str(uuid4())
+        return {"access": access, "refresh": refresh}
 
-    claims = {
-        "name": user.fullName,
-        "email": user.email,
-        "roles": [r.name for r in user.roles]
-    }
+    async def refresh_tokens(self, refresh_token: str) -> Dict[str, str]:
+        payload = decode_token(refresh_token)
 
-    access = create_access_token(user.username, family_id, claims)
-    refresh = create_refresh_token(user.username, family_id)
+        if payload.get("scope") != "refresh":
+            raise HTTPException(status_code=401, detail="INVALID_TOKEN_SCOPE")
 
-    # Registrar refresh en Redis
-    r_payload = decode_token(refresh)
+        jti, family_id = payload["jti"], payload["family"]
 
-    await register_refresh(
-        jti=r_payload["jti"],
-        sub=r_payload["sub"],
-        family_id=r_payload["family"],
-        exp_ts=_get_epoch(r_payload)
-    )
+        if await is_jti_revoked(jti) or await family_is_revoked(family_id):
+            raise HTTPException(status_code=401, detail="TOKEN_REVOKED")
 
-    return {
-        "access": access,
-        "refresh": refresh,
-    }
+        # Validar metadata en Redis
+        meta = await take_refresh_metadata(jti)
+        if not meta:
+            raise HTTPException(status_code=401, detail="TOKEN_EXPIRED_OR_NOT_FOUND")
 
-# -----------------------------
-#  REFRESH
-# -----------------------------
-
-async def refresh_tokens(
-    session: AsyncSession,
-    refresh_token: str
-) -> Optional[str]:
-
-    payload = decode_token(refresh_token)
-
-    print("REFRESH PAYLOAD =", payload)
-    print("IS_REVOKED =", await is_jti_revoked(payload["jti"]))
-    print("FAMILY_REVOKED =", await family_is_revoked(payload["family"]))
-    print("REDIS META =", await take_refresh_metadata(payload["jti"]))
-
-    if payload.get("scope") != "refresh":
-        return None
-
-    jti = payload["jti"]
-    family_id = payload["family"]
-
-    if await is_jti_revoked(jti):
-        return None
-
-    if await family_is_revoked(family_id):
-        return None
-
-    username = payload["sub"]
-
-    # Validar que el refresh esté registrado en Redis
-    meta = await take_refresh_metadata(jti)
-    if not meta:
-        return None
-
-    # Obtener usuario de BD
-    user = await get_user_by_username(session, username)
-    if not user or not user.is_active:
-        return None
-
-    # ROTACIÓN
-    await invalidate_refresh(jti, _get_epoch(payload))
-
-    # generar nuevos tokens
-    claims = {
-        "name": user.fullName,
-        "email": user.email,
-        "roles": [r.name for r in user.roles]
-    }
-
-    new_access = create_access_token(username, family_id, claims)
-    new_refresh = create_refresh_token(username, family_id)
-
-    # Registrar refresh nuevo
-    new_payload = decode_token(new_refresh)
-    await register_refresh(
-        jti=new_payload["jti"],
-        sub=username,
-        family_id=family_id,
-        exp_ts=_get_epoch(new_payload)
-    )
-
-    return {
-        "access": new_access,
-        "refresh": new_refresh
-    }
-
-# -----------------------------
-#  LOGOUT
-# -----------------------------
-
-async def logout_user(access_token: str) -> bool:
-    payload = decode_token(access_token)
-
-    if payload.get("scope") != "access":
-        return False
-
-    # Revocar access actual
-    await revoke_jti(payload["jti"], _get_epoch(payload))
-
-    # Revocar familia completa
-    family_id = payload["family"]
-    ttl_sec = 86400 * 7 * 2  # 2 semanas, configurable
-    await revoke_family(family_id, ttl_sec)
-
-    return True
-
-# -----------------------------
-#  CURRENT USER
-# -----------------------------
-
-async def get_current_user(
-    session: AsyncSession,
-    access_token: str
-) -> Optional[User]:
-    try:
-        payload = decode_token(access_token)
-
-        if payload.get("scope") != "access":
-            return None
-
-        if await is_jti_revoked(payload["jti"]):
-            return None
-
-        username = payload["sub"]
-
-        user = await get_user_by_username(session, username)
+        user = await self.get_user_by_username(payload["sub"])
         if not user or not user.is_active:
+            raise HTTPException(status_code=403, detail="USER_INACTIVE")
+
+        # Rotación: Invalidar el viejo y generar nuevos
+        await invalidate_refresh(jti, self._get_epoch(payload))
+
+        claims = {"name": user.fullName, "email": user.email, "roles": [r.name for r in user.roles]}
+        new_access = create_access_token(user.username, family_id, claims)
+        new_refresh = create_refresh_token(user.username, family_id)
+
+        new_payload = decode_token(new_refresh)
+        await register_refresh(
+            jti=new_payload["jti"],
+            sub=user.username,
+            family_id=family_id,
+            exp_ts=self._get_epoch(new_payload)
+        )
+
+        return {"access": new_access, "refresh": new_refresh}
+
+    async def logout_user(self, access_token: str) -> bool:
+        payload = decode_token(access_token)
+        if payload.get("scope") != "access":
+            return False
+
+        await revoke_jti(payload["jti"], self._get_epoch(payload))
+        await revoke_family(payload["family"], 1209600) # 2 semanas
+        return True
+
+    async def get_current_user(self, access_token: str) -> Optional[User]:
+        try:
+            payload = decode_token(access_token)
+            if payload.get("scope") != "access" or await is_jti_revoked(payload["jti"]):
+                return None
+
+            user = await self.get_user_by_username(payload["sub"])
+            return user if user and user.is_active else None
+        except Exception:
             return None
 
+    async def restore_user_access(self, user_id: int) -> User:
+        user = await self.get_user_by_id(user_id)
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        # Reset de seguridad
+        user.is_active = True
+        user.retry_count = 0 
+        
+        self.session.add(user)
+        await self.session.commit()
+        await self.session.refresh(user)
+        
         return user
-
-    except Exception:
-        return None
-    

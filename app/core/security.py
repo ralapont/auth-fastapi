@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from jose import jwt, JWTError
 from uuid import uuid4
 from typing import Optional, Dict, Any
+from fastapi import Depends, HTTPException, status
 
 def get_password_hash(password: str) -> str:
     # 1. Convertimos el string a bytes
