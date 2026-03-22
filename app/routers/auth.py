@@ -2,17 +2,19 @@ from fastapi import APIRouter, Depends, HTTPException, Header, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
+from app.utils.dependencies import get_current_admin_user
 from app.core.db import get_session
-from app.services.auth_service import (
-    login_user,
-    refresh_tokens,
-    logout_user,
-    get_current_user
-)
+
+from app.exceptions.auth_exceptions import AuthUserLocked, AuthInvalidCredentiasl
 
 from app.schemas.auth import LoginRequest, TokenPair, AccessToken, MeResponse
+from app.services.auth_service import AuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+# Instanciamos para importar en los routers
+async def get_auth_service(session: AsyncSession = Depends(get_session)) -> AuthService:
+    return AuthService(session)
 
 def _bearer(header: str | None) -> str | None:
     if not header:
@@ -21,9 +23,13 @@ def _bearer(header: str | None) -> str | None:
     return token if scheme.lower() == "bearer" else None
 
 @router.post("/login", response_model=TokenPair)
-async def login(data: LoginRequest, session: AsyncSession = Depends(get_session)):
-    tokens = await login_user(session, data.username, data.password)
-
+async def login(data: LoginRequest, service: AuthService = Depends(get_auth_service)):
+    tokens = await service.login_user(data.username, data.password)
+    if tokens == "userLocked":
+        raise AuthUserLocked
+    if tokens == "userInvalidCredentials":
+        raise AuthInvalidCredentiasl
+    
     if not tokens:
         raise HTTPException(401, "Invalid credentials")
     if tokens == "blocked":
@@ -39,33 +45,33 @@ async def login(data: LoginRequest, session: AsyncSession = Depends(get_session)
         "security": [{"bearerAuth": []}]
     }
 )
-async def refresh(authorization: Optional[str] = Header(None), session: AsyncSession = Depends(get_session)):
+async def refresh(authorization: Optional[str] = Header(None), service: AuthService = Depends(get_auth_service)):
     print("AUTH HEADER RAW =", authorization)
     token = _bearer(authorization)
     if not token:
         raise HTTPException(401, "Missing refresh token")
-    tokens = await refresh_tokens(session, token)
+    tokens = await service.refresh_tokens(token)
     if not tokens:
         raise HTTPException(401, "Invalid refresh token")
     return AccessToken(access_token=tokens["access"])
 
 @router.post("/logout", status_code=204)
-async def logout(authorization: str | None = Header(None)):
+async def logout(authorization: str | None = Header(None), service: AuthService = Depends(get_auth_service)):
     token = _bearer(authorization)
     if not token:
         raise HTTPException(401, "Missing access token")
-    ok = await logout_user(token)
+    ok = await service.logout_user(token)
     if not ok:
         raise HTTPException(401, "Invalid token")
     return Response(status_code=204)
 
 @router.get("/me", response_model=MeResponse)
-async def me(authorization: str | None = Header(None), session: AsyncSession = Depends(get_session)):
+async def me(authorization: str | None = Header(None), service: AuthService = Depends(get_auth_service)):
     token = _bearer(authorization)
     if not token:
         raise HTTPException(401, "Missing access token")
 
-    user = await get_current_user(session, token)
+    user = await service.get_current_user(token)
     if not user:
         raise HTTPException(401, "Invalid token")
 
@@ -75,3 +81,14 @@ async def me(authorization: str | None = Header(None), session: AsyncSession = D
         email=user.email,
         roles=[r.name for r in user.roles]
     )
+
+@router.post("/unlock/{user_id}")
+async def restore_user_endpoint(
+    user_id: int,
+    service: AuthService = Depends(get_auth_service),
+    admin = Depends(get_current_admin_user)
+):
+    # Aquí le pasas la sesión 'db' que FastAPI te dio arriba
+    user = await service.unlock(user_id=user_id)
+    
+    return {"message": f"Usuario {user.email} desbloqueado"}

@@ -12,9 +12,6 @@ from app.core.db import get_session
 from app.schemas.user import UserOut
 from app.schemas.user import UserRegisterIn, UserUpdateIn
 
-from app.models.role import Role
-from app.models.user_role import UserRole
-
 from app.services.user_service import UserService
 from app.exceptions.user_exceptions import UserAlreadyExistsError, UserNotFoundError
 
